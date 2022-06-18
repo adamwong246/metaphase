@@ -9,11 +9,19 @@ import Router from 'koa-router';
 import session from "koa-session";
 
 import knex from './db/connection';
+import queries from './db/queries/users';
 import RootView from "./views/Index.tsx";
 import Home from "./views/Home.tsx";
-import Signin from "./views/Regsiter";
-import Status from "./views/Status";
-import queries from './db/queries/users';
+import Admin from "./views/Admin.tsx";
+
+import { IUser } from "./types";
+
+type IAccount = {
+  userid: string;
+  username: string;
+  isAdmin: boolean;
+  isAuthenticated: boolean;
+};
 
 const PORT = process.env.PORT || 1337;
 const app = new Koa();
@@ -47,72 +55,92 @@ passport.use(new LocalStrategy.Strategy({}, (username, password, done) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
-
 app.listen(PORT, () => console.log(`Server listening on port: ${PORT}`));
 
-const Layout = (ctx, child) => {
-
-  if (ctx.isAuthenticated()) {
-    return queries.getSingleUser(ctx.state.user.id).then((users) => {
-      const username = users[0].username;
-      console.log(username);
-  
-      return ReactDOMServer.renderToString(
-        React.createElement(RootView, {
-          username,
-          isAuthenticated: ctx.isAuthenticated(),
-          children: React.createElement(child, { isAuthenticated: ctx.isAuthenticated() })
-        })
-      );
+const Layout = <a>(user: IAccount, child, payload: a) => {
+  return ReactDOMServer.renderToString(
+    React.createElement(RootView, {
+      ...user,
+      children: React.createElement(child, { ...payload, ...user })
     })
-  } else {  
-      return ReactDOMServer.renderToString(
-        React.createElement(RootView, {
-          username: 'guest',
-          isAuthenticated: ctx.isAuthenticated(),
-          children: React.createElement(child, { isAuthenticated: ctx.isAuthenticated() })
-        })
-      );
-
-  }
-
-  
-  
-
-  
+  );
 };
 
-function ensureAuthenticated(context) {
-  return context.isAuthenticated();
-}
+const noAuth: 
+  (ctx: any, guestUser: (a: IAccount) => any) => any 
+  = (ctx, guestUser) => {
+  if (ctx.isAuthenticated()) {
+    return queries.getSingleUser(ctx.state.user.id).then((users) => {
 
-function ensureAdmin(context) {
-  return new Promise((resolve, reject) => {
-    if (context.isAuthenticated()) {
-      queries.getSingleUser(context.state.user.id)
-        .then((user) => {
-          if (user && user[0].admin) resolve(true);
-          resolve(false);
-        })
-        .catch((err) => { reject(false); });
-    }
-    return false;
-  });
-}
+      if (users[0].admin) {
+        return guestUser({
+          userid: ctx.state.user.id,
+          username: users[0].username,
+          isAdmin: true,
+          isAuthenticated: true,
+        });
+      } else {
+        return guestUser({
+          userid: ctx.state.user.id,
+          username: users[0].username,
+          isAdmin: false,
+          isAuthenticated: true,
+        });
+      }
+
+    })
+  } else {
+    return guestUser({
+      userid: '-1',
+      username: 'guest',
+      isAdmin: false,
+      isAuthenticated: false,
+    });
+  }
+};
+
+const auth: (
+  ctx: any,
+  guestUser: (a: IAccount) => any,
+  plainUser: (a: IAccount) => any,
+  adminUser: (a: IAccount) => any,
+) => any = (ctx, guestUser, plainUser, adminUser) => {
+  if (ctx.isAuthenticated()) {
+    return queries.getSingleUser(ctx.state.user.id).then((users) => {
+
+      if (users[0].admin) {
+        return adminUser({
+          userid: ctx.state.user.id,
+          username: users[0].username,
+          isAdmin: true,
+          isAuthenticated: true,
+        });
+      } else {
+        return plainUser({
+          userid: ctx.state.user.id,
+          username: users[0].username,
+          isAdmin: false,
+          isAuthenticated: true,
+        });
+      }
+
+    })
+  } else {
+    return guestUser({
+      userid: '-1',
+      username: 'guest',
+      isAdmin: false,
+      isAuthenticated: false,
+    });
+  }
+};
 
 router.get('/', async (ctx) => {
-  // ctx.type = 'html';
-  // ctx.body = Layout(ctx, Home);
-
-  const r = await Layout(ctx, Home);
   ctx.type = 'html';
-  ctx.body = r;
+  (await noAuth(ctx, async (user) => {
+    ctx.body = (await Layout(user, Home));
+  }));
 
-});
-
-router.get('/auth/register', async (ctx) => {
-  ctx.type = 'html';
-  ctx.body = Layout(ctx, Signin);
 });
 
 router.post('/auth/register', async (ctx) => {
@@ -130,13 +158,8 @@ router.post('/auth/register', async (ctx) => {
   })(ctx);
 });
 
-router.get('/auth/status', async (ctx) => {
-  ctx.type = 'html';
-  ctx.body = Layout(ctx, Status);
-});
-
 router.get('/auth/logout', async (ctx) => {
-  if (ensureAuthenticated(ctx)) {
+  if (ctx.isAuthenticated()) {
     ctx.logout();
     ctx.redirect('/');
   } else {
@@ -157,6 +180,19 @@ router.post('/auth/login', async (ctx) => {
   })(ctx);
 });
 
+router.get('/admin', async (ctx) => {
+  ctx.type = 'html';
+
+  (await auth(ctx, (user) => {
+    ctx.redirect('/');
+  }, (user) => {
+    ctx.redirect('/');
+  }, async (user) => {
+
+    const users: IUser[] = await knex('users').select('*');
+    
+    ctx.body = (await Layout<{users: IUser[]}>(user, Admin, {users}));
+  }));
+});
+
 app.use(router.routes());
-
-

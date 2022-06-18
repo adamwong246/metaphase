@@ -16,11 +16,16 @@ export default (props) => {
         {
           props.isAuthenticated && <>
             <p>you are logged in as {props.username}. <a href="/auth/logout">logout</a></p>
-
           </>
         }
 
-{
+        {
+          props.isAdmin && <>
+            <p>you are <a href="/admin">admin</a> </p>
+          </>
+        }
+
+        {
           !props.isAuthenticated && <>
             <Regsiter />
             <Login />
