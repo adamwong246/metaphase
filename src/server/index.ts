@@ -7,12 +7,17 @@ import passport from "koa-passport";
 import React from "react";
 import Router from 'koa-router';
 import session from "koa-session";
+import serve from 'koa-static'; 
 
 import knex from './db/connection';
 import queries from './db/queries/users';
 import RootView from "./views/Index.tsx";
 import Home from "./views/Home.tsx";
 import Admin from "./views/Admin.tsx";
+import PlayView from "./views/PlayView.tsx";
+
+import {PhaserGame} from "./phaserGame";
+const game = PhaserGame();
 
 import { IUser } from "./types";
 
@@ -28,8 +33,10 @@ const app = new Koa();
 const router = new Router();
 
 app.keys = ['super-secret-key'];
+
 app.use(session(app));
 app.use(bodyParser());
+app.use(serve('./dist'));
 
 passport.serializeUser((user, done) => { done(null, user.id); });
 
@@ -56,6 +63,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.listen(PORT, () => console.log(`Server listening on port: ${PORT}`));
+
 
 const Layout = <a>(user: IAccount, child, payload: a) => {
   return ReactDOMServer.renderToString(
@@ -195,4 +203,13 @@ router.get('/admin', async (ctx) => {
   }));
 });
 
+router.get('/play', async (ctx) => {
+  ctx.type = 'html';
+
+  ctx.body = ReactDOMServer.renderToString(
+    React.createElement(PlayView, {})
+  );
+});
+
 app.use(router.routes());
+

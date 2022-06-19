@@ -1,5 +1,4 @@
-// Generated using webpack-cli https://github.com/webpack/webpack-cli
-
+const webpack = require('webpack');
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
@@ -15,11 +14,15 @@ const config = {
     filename: 'server.js',
   },
 
-  externals: { 'sqlite3': 'commonjs sqlite3' },
+  externals: [
+    "mongodb-client-encryption",
+    "commonjs canvas"
+  ],
 
   plugins: [
-    // Add your plugins here
-    // Learn more about plugins from https://webpack.js.org/configuration/plugins/
+    new webpack.DefinePlugin({
+      navigator: { userAgent: "'node'" }
+    })
   ],
 
   module: {
@@ -28,15 +31,29 @@ const config = {
         test: /\.(ts|tsx)$/i,
         loader: "ts-loader",
         exclude: ["/node_modules/"],
+      },
+      {
+        test: /\.node$/,
+        loader: "node-loader",
       }
-
-      // Add your rules for custom modules here
-      // Learn more about loaders from https://webpack.js.org/loaders/
     ],
   },
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
+    fallback: {
+      assert: require.resolve('assert'),
+      crypto: require.resolve('crypto-browserify'),
+      http: require.resolve('stream-http'),
+      https: require.resolve('https-browserify'),
+      stream: require.resolve('stream-browserify'),
+      zlib: require.resolve('browserify-zlib'),
+    },
   },
+
+  experiments: {
+    topLevelAwait: true
+  }
+
 };
 
 module.exports = () => {

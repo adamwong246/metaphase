@@ -8,19 +8,19 @@ const isProduction = process.env.NODE_ENV == "production";
 const stylesHandler = "style-loader";
 
 const config = {
-  entry: "./src/client/index.ts",
+  
   output: {
-    path: path.resolve(__dirname, "dist"),
-    filename: 'client.js',
+    // path: path.resolve(__dirname, "dist"),
+    filename: '[name].bundle.js',
   },
   devServer: {
     open: true,
     host: "localhost",
   },
   plugins: [
-    new HtmlWebpackPlugin({
-      template: "src/client/index.html",
-    }),
+    // new HtmlWebpackPlugin({
+    //   template: "src/client/index.html",
+    // }),
 
     // Add your plugins here
     // Learn more about plugins from https://webpack.js.org/configuration/plugins/
