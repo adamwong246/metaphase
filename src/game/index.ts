@@ -1,53 +1,47 @@
-console.log('hello phaser');
-
-import Phaser from "phaser";
-import PhaserRaycaster from "phaser-raycaster";
-
-console.log('hello phasergame config');
-
-var config = {
-  width: 800,
-  height: 600,
-  physics: {
-    default: 'arcade',
-    arcade: {
-      gravity: { y: 200 }
+export default (baseUrl: string, assets: [string, string][]) => {
+  var config = {
+    width: 800,
+    height: 600,
+    physics: {
+      default: 'arcade',
+      arcade: {
+        gravity: { y: 200 }
+      }
+    },
+    scene: {
+      preload: function () {
+        this.load.setBaseURL(baseUrl)
+        assets.forEach((asset) => {
+          this.load.image(asset[0], asset[1])
+        })
+      },
+      create: create,
+      update: () => console.log('update!')
     }
-  },
-  scene: {
-    preload: preload,
-    create: create,
-    update: () => console.log('update!')
+  };
+
+  function create() {
+    console.log('create')
+    this.add.image(400, 300, 'sky');
+
+    var particles = this.add.particles('red');
+
+    var emitter = particles.createEmitter({
+      speed: 100,
+      scale: { start: 1, end: 0 },
+      blendMode: 'ADD'
+    });
+
+    var logo = this.physics.add.image(400, 100, 'logo');
+
+    logo.setVelocity(100, 200);
+    logo.setBounce(1, 1);
+    logo.setCollideWorldBounds(true);
+
+    emitter.startFollow(logo);
   }
-};
 
-function preload() {
-  this.load.setBaseURL('http://labs.phaser.io');
-
-  // this.load.image('sky', 'assets/skies/space3.png');
-  // this.load.image('logo', 'assets/sprites/phaser3-logo.png');
-  // this.load.image('red', 'assets/particles/red.png');
+  return config;
 }
-
-function create() {
-  this.add.image(400, 300, 'sky');
-
-  var particles = this.add.particles('red');
-
-  var emitter = particles.createEmitter({
-    speed: 100,
-    scale: { start: 1, end: 0 },
-    blendMode: 'ADD'
-  });
-
-  var logo = this.physics.add.image(400, 100, 'logo');
-
-  logo.setVelocity(100, 200);
-  logo.setBounce(1, 1);
-  logo.setCollideWorldBounds(true);
-
-  emitter.startFollow(logo);
-}
-export default config;
 
 
