@@ -10,7 +10,7 @@ channel.onConnect(error => {
   }
 
   channel.on('chat message', data => {
-    console.log(`You got the message ${data}`)
+    console.log(`You got the message`, data)
   })
 
   channel.emit('chat message', 'a short message sent to the server')

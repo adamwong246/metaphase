@@ -1,4 +1,7 @@
-export default (baseUrl: string, assets: [string, string][]) => {
+export default (baseUrl: string, assets: [string, string][], updater) => {
+
+  let logo;
+  
   var config = {
     width: 800,
     height: 600,
@@ -16,7 +19,9 @@ export default (baseUrl: string, assets: [string, string][]) => {
         })
       },
       create: create,
-      update: () => console.log('update!')
+      update: () => {
+        updater && updater(logo.body.center)
+      }
     }
   };
 
@@ -32,8 +37,7 @@ export default (baseUrl: string, assets: [string, string][]) => {
       blendMode: 'ADD'
     });
 
-    var logo = this.physics.add.image(400, 100, 'logo');
-
+    logo = this.physics.add.image(400, 100, 'logo');
     logo.setVelocity(100, 200);
     logo.setBounce(1, 1);
     logo.setCollideWorldBounds(true);

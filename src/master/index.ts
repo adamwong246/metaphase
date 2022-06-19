@@ -1,18 +1,14 @@
 import Phaser from "phaser";
 import gameConfigurator from "../game/index.ts";
 
-const gameConfig = gameConfigurator('', []);
+const gameConfig = gameConfigurator('', [], function (x) {
+  window.authoritativeUpdate(x);
+});
 
 const game = new Phaser.Game({
   ...gameConfig,
   type: Phaser.HEADLESS,
   autoFocus: false,
-  scene: {
-    ...gameConfig.scene,
-    update: () => {
-      window.authoritativeUpdate();
-    }
-  }
 });
 
 export default game;
