@@ -75,7 +75,7 @@ export const PhaserGame = async () => {
       url: "https://example.org/",
       runScripts: "dangerously",
       resources: "usable",
-      pretendToBeVisual: true,
+      pretendToBeVisual: false,
 
       beforeParse: (window) => {
 
@@ -88,13 +88,10 @@ export const PhaserGame = async () => {
         window.URL.revokeObjectURL = () => { };
 
         const animationFrame = (cb: any) => {
-
           if (typeof cb !== 'function') return 0 // this line saves a lot of cpu
-          window.setTimeout(() => cb(0), 1 / FPS)
-          // console.log("tick")
+          window.setTimeout(() => cb(0), 0)
           return 0
         }
-
         window.requestAnimationFrame = cb => animationFrame(cb)
 
         window.authoritativeUpdate = (data) => {

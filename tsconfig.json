@@ -9,5 +9,9 @@
     "allowJs": true,
     "jsx": "react"
   },
-  "files": ["src/client/index.ts","src/server/index.ts"]
+  "files": [
+    "src/server/index.ts",
+    "src/master/index.ts",
+    "src/slave/index.ts",
+  ]
 }
