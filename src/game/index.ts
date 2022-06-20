@@ -1,14 +1,14 @@
-export default (baseUrl: string, assets: [string, string][], updater) => {
+export default (baseUrl: string, assets: [string, string][], updater, creater) => {
 
   let logo;
-  
+
   var config = {
     width: 800,
     height: 600,
     physics: {
       default: 'arcade',
       arcade: {
-        gravity: { y: 200 }
+        gravity: { y: 200, x: 100 }
       }
     },
     scene: {
@@ -20,13 +20,14 @@ export default (baseUrl: string, assets: [string, string][], updater) => {
       },
       create: create,
       update: () => {
+        console.log("authoritativeUpdate", logo.body.center)
         updater && updater(logo.body.center)
       }
     }
   };
 
   function create() {
-    console.log('create')
+    console.log('create!')
     this.add.image(400, 300, 'sky');
 
     var particles = this.add.particles('red');
@@ -38,14 +39,15 @@ export default (baseUrl: string, assets: [string, string][], updater) => {
     });
 
     logo = this.physics.add.image(400, 100, 'logo');
-    logo.setVelocity(100, 200);
-    logo.setBounce(1, 1);
-    logo.setCollideWorldBounds(true);
-
+    creater && creater(logo);
     emitter.startFollow(logo);
   }
 
-  return config;
+  function authoritativeUpdate(position){
+    logo.setPosition(position.x, position.y)
+  }
+
+  return {config, authoritativeUpdate};
 }
 
 

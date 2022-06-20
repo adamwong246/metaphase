@@ -1,14 +1,14 @@
 import Phaser from "phaser";
 import gameConfigurator from "../game/index.ts";
 
-const gameConfig = gameConfigurator('', [], function (x) {
-  window.authoritativeUpdate(x);
-});
-
-const game = new Phaser.Game({
-  ...gameConfig,
+export default new Phaser.Game({
+  ...(gameConfigurator('', [], function (x) {
+    window.authoritativeUpdate(x);
+  }, function (logo) {
+    logo.setVelocity(100, 200);
+    logo.setBounce(1, 1);
+    logo.setCollideWorldBounds(true);
+  }).config),
   type: Phaser.HEADLESS,
   autoFocus: false,
 });
-
-export default game;

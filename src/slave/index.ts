@@ -1,20 +1,7 @@
 import gameConfigurator from "../game/index.ts";
 import geckos from '@geckos.io/client'
 
-const channel = geckos({ port: 3000 }) // default port is 9208
-
-channel.onConnect(error => {
-  if (error) {
-    console.error(error.message)
-    return
-  }
-
-  channel.on('chat message', data => {
-    console.log(`You got the message`, data)
-  })
-
-  channel.emit('chat message', 'a short message sent to the server')
-});
+const channel = geckos({ port: 3000 });
 
 const gameConfig = gameConfigurator(
   'http://labs.phaser.io',
@@ -25,6 +12,18 @@ const gameConfig = gameConfigurator(
   ]
 );
 
-const game = new Phaser.Game(gameConfig);
+const game = new Phaser.Game(gameConfig.config);
+
+channel.onConnect(error => {
+  if (error) {
+    console.error(error.message)
+    return
+  }
+
+  channel.on('chat message', data => gameConfig.authoritativeUpdate(data))
+  channel.emit('chat message', 'a short message sent to the server')
+});
+
+
 
 export default game;
