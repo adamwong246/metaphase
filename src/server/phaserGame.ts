@@ -1,4 +1,3 @@
-// import canvas from "canvas";
 import jsdom from "jsdom";
 import fs from "fs";
 import path from "path";
@@ -6,9 +5,12 @@ import http from "http";
 
 import geckos from '@geckos.io/server'
 
+import {channelName, udpPort} from "../index";
+
 const io = geckos();
 const { JSDOM } = jsdom;
-const FPS = 60;
+
+const connections = {};
 
 class FakeXMLHttpRequest {
   url;
@@ -17,7 +19,6 @@ class FakeXMLHttpRequest {
   responseText;
 
   open(_type, url) {
-    // console.log("open", _type, url);
     this.url = path.resolve(__dirname, url);
   }
 
@@ -54,7 +55,6 @@ class FakeXMLHttpRequest {
 };
 
 export const PhaserGame = async () => {
-
   const vdom = new JSDOM(
     `
     <!DOCTYPE html>
@@ -89,29 +89,37 @@ export const PhaserGame = async () => {
 
         const animationFrame = (cb: any) => {
           if (typeof cb !== 'function') return 0 // this line saves a lot of cpu
-          window.setTimeout(() => cb(0), 0)
+          window.setTimeout(() => cb(0), 1)
           return 0
         }
         window.requestAnimationFrame = cb => animationFrame(cb)
 
         window.authoritativeUpdate = (data) => {
-          io.room(undefined).emit('chat message', data)
+          io.room(undefined).emit(channelName, {update: data})
         };
+
       },
     }
   );
 
-  io.listen(3000);
   io.onConnection(channel => {
-    console.log(channel.roomId)
     channel.onDisconnect(() => {
-      console.log(`${channel.id} got disconnected`)
-    })
+      vdom.window.removeUser(connections[channel.id]);
+      io.room(undefined).emit(channelName, {goodbye: connections[channel.id]});
+      delete connections[channel.id];
+    });
 
-    // channel.on('chat message', data => {
-    //   console.log(`got ${data} from "chat message"`)
-    //   // emit the "chat message" data to all channels in the same room
-    //   io.room(channel.roomId).emit('chat message', data)
-    // })
+    channel.on(channelName, data => {
+      if (data.hello){
+        vdom.window.addUser(data.hello);
+        io.room(undefined).emit(channelName, {hello: data.hello});
+        connections[channel.id] = data.hello;
+      } else if (data.go){
+        vdom.window.moveUser(connections[channel.id], data.go);
+      }
+
+    })
   });
+
+  io.listen(udpPort);
 };

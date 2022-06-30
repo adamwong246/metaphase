@@ -7,7 +7,7 @@ import { IUser } from "../types";
 export default (props) => {
   return (<>
 
-<html>
+    <html>
       <head>
         <title>play</title>
         <meta name="description" content="Our first page" />
@@ -16,7 +16,6 @@ export default (props) => {
         <script src="slave.bundle.js"></script>
       </head>
       <body>
-      <h1>play</h1>
       </body>
     </html>
 
