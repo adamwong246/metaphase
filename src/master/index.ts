@@ -3,6 +3,7 @@ import gameConfig from "../game/index.ts";
 
 const logos = {};
 let tMark;
+let logoGroup;
 
 const game = new Phaser.Game({
   ...gameConfig,
@@ -12,7 +13,13 @@ const game = new Phaser.Game({
     default: 'arcade',
   },
   scene: {
+    create: () => {
+      logoGroup = new Phaser.Physics.Arcade.Group(this, game.scene.scenes[0]);
+
+
+    },
     update: (time) => {
+      game.scene.scenes[0].physics.collide(logoGroup);
 
       // if (!tMark) { tMark = time }
 
@@ -42,7 +49,6 @@ const game = new Phaser.Game({
             return {
               name: l.name,
               position: l.body.position,
-              velocity: l.body.velocity
             };
 
           })
@@ -55,8 +61,9 @@ const game = new Phaser.Game({
 
 window.addUser = function (uid) {
   const logo = game.scene.scenes[0].physics.add.image(400, 100, 'logo');
-  logo.setVelocity(100, 200);
-  logo.setBounce(1, 1);
+  logoGroup.add(logo);
+  logo.setVelocity((Math.random() * 100) - 50, (Math.random() * 100) - 50);
+  logo.setBounce(0.8, 0.8);
   logo.setCollideWorldBounds(true);
   logo.body.checkCollision.up = true;
   logo.body.checkCollision.down = true;
@@ -64,21 +71,24 @@ window.addUser = function (uid) {
   logo.body.checkCollision.right = true;
   logo.setName(uid);
   logos[uid] = logo;
+
 };
 
 window.removeUser = function (uid) {
+  logoGroup.remove(logos[uid]);
+  logos[uid].destroy();
   delete logos[uid];
 };
 
 window.moveUser = function (uid, direction) {
-  console.log(Object.keys(logos));
+  // console.log(Object.keys(logos));
 
   if (direction === "up") {
     logos[uid].setVelocity(logos[uid].body.velocity.x, logos[uid].body.velocity.y - 10);
   }
 
   if (direction === "down") {
-    logos[uid].setVelocity(logos[uid].body.velocity.x, logos[uid].body.velocity.y - 10);
+    logos[uid].setVelocity(logos[uid].body.velocity.x, logos[uid].body.velocity.y + 10);
   }
   if (direction === "right") {
     logos[uid].setVelocity(logos[uid].body.velocity.x + 10, logos[uid].body.velocity.y);

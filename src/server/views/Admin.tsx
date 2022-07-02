@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 
-import Regsiter from "./Regsiter";
-import Login from "./Login";
-import { IUser } from "../types";
+import { IUser, IGameSession } from "../types";
 
-export default (props: {users: IUser[]}) => {
+export default (props: { gameSessions: IGameSession[], users: IUser[] }) => {
   return (<>
 
     <h3>admins only</h3>
@@ -16,5 +14,21 @@ export default (props: {users: IUser[]}) => {
         })
       }
     </ul>
+
+    <ul>
+      {
+        props.gameSessions.map((gs) => {
+          return (<li>
+            {JSON.stringify(gs)}
+            <a href={`/play/${gs.uid}`}>{`/play/${gs.uid}`}</a>
+          </li>)
+        })
+      }
+    </ul>
+
+    <form action="/gameSession" method="post">
+      <p><button type="submit">New game session</button></p>
+    </form>
+
   </>);
 };
