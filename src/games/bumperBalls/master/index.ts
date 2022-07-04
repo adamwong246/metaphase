@@ -14,11 +14,9 @@ const game = new Phaser.Game({
   },
   scene: {
     create: () => {
-      logoGroup = new Phaser.Physics.Arcade.Group(this, game.scene.scenes[0]);
-
-
+      logoGroup = new Phaser.Physics.Arcade.Group(new Phaser.Physics.Arcade.World(game.scene.scenes[0], {}), game.scene.scenes[0]);
     },
-    update: (time) => {
+    update: function (time) {
       game.scene.scenes[0].physics.collide(logoGroup);
 
       // if (!tMark) { tMark = time }
@@ -53,10 +51,8 @@ const game = new Phaser.Game({
 
           })
       );
-
-
     }
-  }
+  },
 });
 
 window.addUser = function (uid) {
@@ -71,18 +67,14 @@ window.addUser = function (uid) {
   logo.body.checkCollision.right = true;
   logo.setName(uid);
   logos[uid] = logo;
-
 };
 
 window.removeUser = function (uid) {
-  logoGroup.remove(logos[uid]);
   logos[uid].destroy();
   delete logos[uid];
 };
 
 window.moveUser = function (uid, direction) {
-  // console.log(Object.keys(logos));
-
   if (direction === "up") {
     logos[uid].setVelocity(logos[uid].body.velocity.x, logos[uid].body.velocity.y - 10);
   }
@@ -98,8 +90,6 @@ window.moveUser = function (uid, direction) {
     logos[uid].setVelocity(logos[uid].body.velocity.x - 10, logos[uid].body.velocity.y);
   }
 
-
 };
-
 
 export default game;

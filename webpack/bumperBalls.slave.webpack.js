@@ -1,11 +1,11 @@
 const path = require("path");
 
-const baseConfig = require("./src/game/webpack.config")();
+const baseConfig = require("../src/games/bumperBalls/game/webpack.config")();
 
 module.exports = () => {
   return {
     ...baseConfig,
-    entry: { master: "./src/master/index.ts" },
+    entry: { slave: "./src/games/bumperBalls/slave/index.ts" },
     output: {
       path: path.resolve(__dirname, "dist"),
       ...baseConfig.output

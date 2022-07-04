@@ -1,10 +1,9 @@
 import Phaser from "phaser";
-import uuidv4 from "uuid/v4";
 import geckos from '@geckos.io/client'
 import gameConfig from "../game/index.ts";
 import game from "../master";
 
-import { udpEvent, udpPort } from "../index";
+import { udpEvent, udpPort } from "../../../index";
 
 const channel = geckos({ port: udpPort });
 
@@ -46,8 +45,6 @@ const game = new Phaser.Game({
     }
   }
 });
-
-
 
 channel.onConnect(error => {
   console.log("onConnect", channel.id, error);
@@ -94,7 +91,7 @@ channel.onConnect(error => {
 
   });
 
-  channel.emit(udpEvent, { hello: localStorage.getItem('udpRoomUid') });
+  channel.emit(udpEvent, { hello: window.udpRoomUid });
 });
 
 export default (udpRoomUid) => {

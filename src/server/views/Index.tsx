@@ -1,15 +1,31 @@
 import React, { useState } from "react";
 
+import { IInjections } from "../types";
+
 import Regsiter from "./Regsiter";
 import Login from "./Login";
 
-export default (props) => {
+export default (props: {
+  children: any,
+  injections: IInjections[],
+  isAuthenticated: boolean, isAdmin: boolean, username: string
+}) => {
   return (<>
     <html>
       <head>
         <title>spacetrash</title>
-        <meta name="description" content="Our first page" />
-        <meta name="keywords" content="html tutorial template" />
+
+        {
+          ...props.injections.map((i) => {
+            const p = {};
+            if (i.src) {
+              p.src = i.src;
+            };
+
+            return (<script {...p} dangerouslySetInnerHTML={{ __html: i.content }} />);
+          })
+        }
+
       </head>
       <body>
         <a href="/"><h1>spacetrash</h1></a>
@@ -32,7 +48,9 @@ export default (props) => {
           </>
         }
 
-        {props.children}
+        <div id="body-children">
+          {props.children}
+        </div>
       </body>
     </html>
   </>);

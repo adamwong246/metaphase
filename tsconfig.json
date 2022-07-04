@@ -1,5 +1,4 @@
 {
-
   "compilerOptions": {
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
@@ -11,7 +10,7 @@
   },
   "files": [
     "src/server/index.ts",
-    "src/master/index.ts",
-    "src/slave/index.ts",
+    "src/games/bumperBalls/master/index.ts",
+    "src/games/bumperBalls/slave/index.ts",
   ]
 }
