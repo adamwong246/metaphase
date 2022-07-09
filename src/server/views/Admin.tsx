@@ -2,11 +2,10 @@ import React, { useState } from "react";
 
 import { IUser, IGameSession } from "../types";
 
-export default (props: { gameSessions: IGameSession[], users: IUser[] }) => {
+export default (props: { gameSessions: [], users: IUser[] }) => {
   return (<>
 
     <h3>admins only</h3>
-
     <ul>
       {
         props.users.map((user) => {
@@ -19,8 +18,8 @@ export default (props: { gameSessions: IGameSession[], users: IUser[] }) => {
       {
         props.gameSessions.map((gs) => {
           return (<li>
-            {JSON.stringify(gs)}
-            <a href={`/play/${gs.uid}`}>{`/play/${gs.uid}`}</a>
+            <p><a href={`/play/${gs}`}>{`/play/${gs}`}</a></p>
+            <p><a href={`/watch/${gs}`}>{`/watch/${gs}`}</a></p>
           </li>)
         })
       }

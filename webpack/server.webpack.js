@@ -11,7 +11,7 @@ const config = {
   entry: "./src/server/index.ts",
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: 'server.js',
+    filename: 'server.bundle.js',
   },
 
   externals: [
@@ -27,6 +27,7 @@ const config = {
 
   module: {
     rules: [
+
       {
         test: /\.(ts|tsx)$/i,
         loader: "ts-loader",
@@ -39,7 +40,7 @@ const config = {
     ],
   },
   resolve: {
-    extensions: [".tsx", ".ts", ".js"],
+    extensions: [".tsx", ".ts", ".js", ".json"],
     fallback: {
       assert: require.resolve('assert'),
       crypto: require.resolve('crypto-browserify'),

@@ -1,3 +1,4 @@
+const pm2 = require('pm2');
 
 import * as ReactDOMServer from 'react-dom/server'
 import bcrypt from 'bcryptjs';
@@ -10,17 +11,52 @@ import Router from 'koa-router';
 import serve from 'koa-static';
 import session from "koa-session";
 
-import knex from './db/connection';
+import phaserFile from '!raw-loader!../../node_modules/phaser/dist/phaser'
+
 import queries from './db/queries/users';
 import Admin from "./views/Admin.tsx";
 import EmptyBody from "./views/EmptyBody.tsx";
 import Home from "./views/Home.tsx";
 import RootView from "./views/Index.tsx";
 import ShipBuilder from "./views/ShipBuilder.tsx";
+import { IUser, IInjections, IAccount } from "./types";
+import db from './db/connection';
 
-import { IGameSession, IUser, IInjections, IAccount } from "./types";
+const PORT = process.env.PORT || 1337;
+const app = new Koa();
+const router = new Router();
 
-const Layout = <a>(user: IAccount, child, payload: a, injections: IInjections[] = []) => {
+export const ServerState = {
+  GameSessions: () => {
+    return new Promise((res, rej) => {
+      pm2.list((err, list) => {
+        res(list.map((l) => l.name).filter((n) => n.match(/masterServer-.*/g)).map((s) => s.split('-')[1]));
+      })
+    });
+  },
+
+  addSession: async () => {
+    return new Promise((res, rej) => {
+      pm2.list((err, list) => {
+        list.forEach((p) => {
+          if (p.name === 'processServer') {
+            pm2.sendDataToProcessId({
+              id: p.pm_id,
+              type: 'process:msg',
+              data: {
+                bootMasterServer: true
+              },
+              topic: true
+            }, function (err, res) {
+            });
+          };
+        });
+      });
+    });
+  }
+};
+
+export const Layout = <a>(user: IAccount, child, payload: a, injections: IInjections[] = []) => {
   return ReactDOMServer.renderToString(
     React.createElement(RootView, {
       ...user,
@@ -30,7 +66,7 @@ const Layout = <a>(user: IAccount, child, payload: a, injections: IInjections[] 
   );
 };
 
-const noAuth:
+export const noAuth:
   (ctx: any, guestUser: (a: IAccount) => any) => any
   = (ctx, guestUser) => {
     if (ctx.isAuthenticated()) {
@@ -63,7 +99,7 @@ const noAuth:
     }
   };
 
-const auth: (
+export const auth: (
   ctx: any,
   guestUser: (a: IAccount) => any,
   plainUser: (a: IAccount) => any,
@@ -99,9 +135,6 @@ const auth: (
   }
 };
 
-const PORT = process.env.PORT || 1337;
-const app = new Koa();
-const router = new Router();
 
 { // setup server
   app.keys = ['super-secret-key'];
@@ -113,13 +146,13 @@ const router = new Router();
   passport.serializeUser((user, done) => { done(null, user.id); });
 
   passport.deserializeUser((id, done) => {
-    return knex('users').where({ id }).first()
+    return db('users').where({ id }).first()
       .then((user) => { done(null, user); })
       .catch((err) => { done(err, null); });
   });
 
   passport.use(new LocalStrategy.Strategy({}, (username, password, done) => {
-    knex('users').where({ username }).first()
+    db('users').where({ username }).first()
       .then((user) => {
         if (!user) return done(null, false);
         if (!bcrypt.compareSync(password, user.password)) {
@@ -137,97 +170,105 @@ const router = new Router();
   app.listen(PORT, () => console.log(`http server running on port: ${PORT}`));
 }
 
-export default ({ udpServer, ServerState }) => {
+{ // routing
+  router.get('/', async (ctx) => {
+    ctx.type = 'html';
+    (await noAuth(ctx, async (user) => {
+      ctx.body = (await Layout(user, Home, {}, []));
+    }));
 
-  { // routing
-    router.get('/', async (ctx) => {
-      ctx.type = 'html';
-      (await noAuth(ctx, async (user) => {
-        ctx.body = (await Layout(user, Home, {}, []));
-      }));
+  });
 
-    });
-
-    router.post('/auth/register', async (ctx) => {
-      const user = await queries.addUser(ctx.request.body);
-      return passport.authenticate('local', (err, user, info, status) => {
-        if (user) {
-          ctx.type = 'html';
-          ctx.login(user);
-          ctx.redirect('/');
-        } else {
-          ctx.type = 'html';
-          ctx.status = 400;
-          ctx.body = { status: 'error' };
-        }
-      })(ctx);
-    });
-
-    router.get('/auth/logout', async (ctx) => {
-      if (ctx.isAuthenticated()) {
-        ctx.logout();
+  router.post('/auth/register', async (ctx) => {
+    const user = await queries.addUser(ctx.request.body);
+    return passport.authenticate('local', (err, user, info, status) => {
+      if (user) {
+        ctx.type = 'html';
+        ctx.login(user);
         ctx.redirect('/');
       } else {
-        ctx.body = { success: false };
-        ctx.throw(401);
+        ctx.type = 'html';
+        ctx.status = 400;
+        ctx.body = { status: 'error' };
       }
-    });
+    })(ctx);
+  });
 
-    router.post('/auth/login', async (ctx) => {
-      return passport.authenticate('local', (err, user, info, status) => {
-        if (user) {
-          ctx.login(user);
-          ctx.redirect('/');
-        } else {
-          ctx.status = 400;
-          ctx.body = { status: 'error' };
-        }
-      })(ctx);
-    });
+  router.get('/auth/logout', async (ctx) => {
+    if (ctx.isAuthenticated()) {
+      ctx.logout();
+      ctx.redirect('/');
+    } else {
+      ctx.body = { success: false };
+      ctx.throw(401);
+    }
+  });
 
-    router.get('/admin', async (ctx) => {
-      ctx.type = 'html';
-
-      (await auth(ctx, (user) => {
+  router.post('/auth/login', async (ctx) => {
+    return passport.authenticate('local', (err, user, info, status) => {
+      if (user) {
+        ctx.login(user);
         ctx.redirect('/');
-      }, (user) => {
-        ctx.redirect('/');
-      }, async (user) => {
+      } else {
+        ctx.status = 400;
+        ctx.body = { status: 'error' };
+      }
+    })(ctx);
+  });
 
-        const users: IUser[] = await knex('users').select('*');
+  router.get('/admin', async (ctx) => {
+    ctx.type = 'html';
 
-        ctx.body = (
-          await Layout<{ users: IUser[], gameSessions: IGameSession[] }>(user, Admin, { users, gameSessions: ServerState.GameSessions })
-        );
-      }));
-    });
+    (await auth(ctx, (user) => {
+      ctx.redirect('/');
+    }, (user) => {
+      ctx.redirect('/');
+    }, async (user) => {
+      const users: IUser[] = await db('users').select('*');
+      const gs = await ServerState.GameSessions();
+      ctx.body = (
+        await Layout<{ users: IUser[], gameSessions }>(user, Admin, {
+          users,
+          gameSessions: gs
+        })
+      );
+    }));
+  });
 
-    router.get('/play/:id', async (cntxt) => {
-      const gameUid = cntxt.params.id;
-      cntxt.type = 'html';
-      (await noAuth(cntxt, async (user) => {
-        cntxt.body = (await Layout(user, EmptyBody, {}, [
-          { src: 'https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js', content: '' },
-          { src: '/slave.bundle.js', content: `` },
-          { content: `window.udpRoomUid = '${gameUid}';` }
-        ]));
-      }));
-    });
+  router.get('/play/:id', async (cntxt) => {
+    const gameUid = cntxt.params.id;
+    cntxt.type = 'html';
+    (await noAuth(cntxt, async (user) => {
+      cntxt.body = (await Layout(user, EmptyBody, {}, [
+        { content: phaserFile },
+        { src: '/slave.bundle.js', content: `` },
+        { content: `window.udpRoomUid = '${gameUid}';` }
+      ]));
+    }));
+  });
 
-    router.post('/gameSession', async (cntxt) => {
-      ServerState.addSession(udpServer);
-      cntxt.redirect('/admin');
-    })
-
-    router.get('/shipbuilder', async (cntxt) => {
-      cntxt.type = 'html';
-      (await noAuth(cntxt, async (user) => { cntxt.body = (await Layout(user, ShipBuilder, {}, [{ src: '/client.bundle.js', content: '' }])); }));
-    });
-
-    app.use(router.routes());
-  }
-
-  return app;
+  router.get('/watch/:id', async (cntxt) => {
+    const gameUid = cntxt.params.id;
+    cntxt.type = 'html';
+    (await noAuth(cntxt, async (user) => {
+      cntxt.body = (await Layout(user, EmptyBody, {}, [
+        { content: phaserFile },
+        { src: '/audience.bundle.js', content: `` },
+        { content: `window.udpRoomUid = '${gameUid}';` }
+      ]));
+    }));
+  });
 
 
+  router.post('/gameSession', async (cntxt) => {
+    ServerState.addSession();
+    cntxt.redirect('/admin');
+  })
+
+  router.get('/shipbuilder', async (cntxt) => {
+    cntxt.type = 'html';
+    (await noAuth(cntxt, async (user) => { cntxt.body = (await Layout(user, ShipBuilder, {}, [{ src: '/client.bundle.js', content: '' }])); }));
+  });
+
+  app.use(router.routes());
 }

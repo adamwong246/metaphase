@@ -33,6 +33,7 @@
     "graphology": "^0.24.1",
     "https-browserify": "^1.0.0",
     "jsdom": "^19.0.0",
+    "json-loader": "^0.5.7",
     "knex": "^2.1.0",
     "knex-migrate": "^1.7.4",
     "koa": "^2.13.4",
@@ -42,6 +43,7 @@
     "koa-router": "^10.1.1",
     "koa-session": "^6.2.0",
     "koa-static": "^5.0.0",
+    "memory-fs": "^0.5.0",
     "mkdirp": "^1.0.4",
     "mocha": "^10.0.0",
     "mock-aws-s3": "^4.0.2",
@@ -59,6 +61,8 @@
     "pg-query-stream": "^4.2.3",
     "phaser": "^3.55.2",
     "phaser-raycaster": "^0.10.1",
+    "pm2": "5.2.0",
+    "raw-loader": "^4.0.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "spdx-license-ids": "^3.0.11",
@@ -97,6 +101,8 @@
     "build:master": "webpack -c webpack/bumperBalls.master.webpack.js",
     "build:server": "webpack -c webpack/server.webpack.js",
     "dev:back": "webpack --watch -c webpack/server.webpack.js & nodemon ./dist/server.js",
-    "dev": "webpack --watch -c webpack/client.webpack.js & webpack --watch -c webpack/bumperBalls.master.webpack.js & webpack --watch -c webpack/bumperBalls.slave.webpack.js & webpack --watch -c webpack/server.webpack.js & nodemon ./webpack/dist/server.js"
+    "build:masterServer": "webpack -c webpack/bumperBalls.server.webpack.js",
+    "dev": "webpack --watch -c webpack/client.webpack.js & webpack --watch -c webpack/bumperballs.server.webpack.js & webpack --watch -c webpack/bumperBalls.master.webpack.js & webpack --watch -c webpack/bumperBalls.slave.webpack.js & webpack --watch -c webpack/http.webpack.js & webpack --watch -c webpack/udp.webpack.js & webpack --watch -c webpack/audience.webpack.js",
+    "run:pm2": "nodemon ./src/pm2.js"
   }
 }
