@@ -102,6 +102,9 @@ pm2.list((err, list) => {
               if (packet.data.helloFromClient) {
                 window.addPlayer(packet.data.helloFromClient)
               }
+              if (packet.data.disconnect) {
+                window.removePlayer(packet.data.disconnect)
+              }
             });
 
             window.masterReady = () => {
@@ -124,9 +127,34 @@ pm2.list((err, list) => {
                 });
               });
             }
+
+            window.goodbyePlayer = (goodbyeUid) => {
+              console.log("window.goodbyePlayer", goodbyeUid)
+              return new Promise((res, rej) => {
+                pm2.list((err, list) => {
+                  list.forEach((p) => {
+                    if (p.name === 'processServer') {
+                      pm2.sendDataToProcessId({
+                        id: p.pm_id,
+                        type: 'process:msg',
+                        data: {
+                          goodbyePlayer: goodbyeUid
+                        },
+                        topic: true
+                      }, function (err, res) {
+                      });
+                    };
+                  });
+                });
+              });
+            }
+
           },
         }
       );
+
+      // vdom.virtualConsole.sendTo(console);
+
     };
   });
 });

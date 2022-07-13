@@ -4,7 +4,79 @@ const { uid } = require('uid');
 // import { pm2Send } from "./server/pm2Helper";
 
 process.on('message', function (packet) {
-  console.log("message", packet.data);
+  console.log(packet.data, packet.data.udpRoomUid);
+
+  if (packet.data.goodbyePlayer) {
+    new Promise((res, rej) => {
+      pm2.list((err, list) => {
+        list.forEach((p) => {
+          if (p.name === `masterServer-${packet.data.goodbyePlayer}`) {
+            list.forEach((p2) => {
+              if (p2.name === 'udp') {
+                const payload = {
+                  id: p2.pm_id,
+                  type: 'process:msg',
+                  data: {
+                    ...packet.data,
+                    pm_id: p.pm_id
+                  },
+                  topic: true
+                };
+                pm2.sendDataToProcessId(payload, function (err, res) {
+                });
+              };
+            });
+          };
+        });
+      });
+    });
+  }
+
+  if (packet.data.goodbyePlayer) {
+    new Promise((res, rej) => {
+      pm2.list((err, list) => {
+        list.forEach((p) => {
+          if (p.name === `masterServer-${packet.data.masterReady}`) {
+            list.forEach((p2) => {
+              if (p2.name === 'udp') {
+                const payload = {
+                  id: p2.pm_id,
+                  type: 'process:msg',
+                  data: {
+                    ...packet.data,
+                    pm_id: p.pm_id
+                  },
+                  topic: true
+                };
+                pm2.sendDataToProcessId(payload, function (err, res) {
+                });
+              };
+            });
+          };
+        });
+      });
+    });
+  }
+
+  if (packet.data.disconnect) {
+    new Promise((res, rej) => {
+      pm2.list((err, list) => {
+        list.forEach((p) => {
+          if (p.name === `masterServer-${packet.data.udpRoomUid}`) {
+            const payload = {
+              id: p.pm_id,
+              type: 'process:msg',
+              data: packet.data,
+              topic: true
+            };
+            pm2.sendDataToProcessId(payload, function (err, res) {
+            });
+          }
+        }
+        )
+      })
+    })
+  }
 
   if (packet.data.helloFromClient) {
 
@@ -33,7 +105,6 @@ process.on('message', function (packet) {
         )
       })
     })
-
   }
 
   if (packet.data.base64Canvas) {

@@ -6,26 +6,27 @@ import game from "../master";
 
 import { udpPort } from "../../../index";
 
-const channel = geckos({ port: udpPort });
-
-let logos = {};
+let orbLookup = {};
 let keys;
-let logoGroup;
 let physWorld;
+let t = Date.now();
+let lineGraphics;
 
-let pointers;
+const channel = geckos({ port: udpPort });
 
 const game = new Phaser.Game({
   ...gameConfig,
+  type: Phaser.WEBGL,
 
   scene: {
     create: function () {
       this.add.image(400, 300, 'sky');
       keys = game.scene.scenes[0].input.keyboard.addKeys('W,A,S,D');
-
       physWorld = new Phaser.Physics.Arcade.World(game.scene.scenes[0], {});
-      logoGroup = new Phaser.Physics.Arcade.Group(physWorld, game.scene.scenes[0]);
-      pointers = []; //new Phaser.GameObjects.Group(game.scene.scenes[0]);
+      game.scene.scenes[0].add.circle(400, 300, 100, 0x0000FF);
+      lineGraphics = game.scene.scenes[0].add.graphics({ lineStyle: { width: 4, color: 0xaa00aa } });
+
+
 
     },
 
@@ -36,10 +37,12 @@ const game = new Phaser.Game({
       // this.load.image('logo', 'assets/sprites/phaser3-logo.png');
       this.load.image('red', 'assets/particles/blue.png');
       this.load.image('redorb', 'assets/sprites/orb-red.png');
+
+      // this.load.script('filterX', '../filters/BlurX.js');
+      // this.load.script('filterY', '../filters/BlurY.js');
     },
 
     update: function () {
-      logoGroup.setOrigin(0, 0);
       if (keys.W.isDown) {
         channel.emit('makeMove', { go: 'up' });
       }
@@ -61,6 +64,7 @@ channel.onConnect(error => {
     console.error(error.message)
     return
   }
+  console.log("udp connected")
 
   // channel.on('addPeer', (channelId: string) => {
   //   logos[channelId] = game.scene.scenes[0].add.image(400, 100, 'logo');
@@ -79,66 +83,56 @@ channel.onConnect(error => {
   //   }
   // });
 
-  channel.on('updatePeers', (update: { balls: [], intersections: [] }) => {
-    const { balls, intersections } = update;
+  channel.on('updatePeers', (update: { balls: [], objects: [] }) => {
+    console.log(update)
+    const { balls, objects } = update;
 
-    let min = 0;
-    intersections.forEach((ntrsctn, ndx) => {
-      min = ndx;
-      console.log(ntrsctn, ndx);
-      if (!pointers[ndx]) {
-        pointers[ndx] = game.scene.scenes[0].physics.add.staticImage(ntrsctn.x, ntrsctn.y, 'redorb');
-        // debugger
-      } else {
-        pointers[ndx].setPosition(ntrsctn.x, ntrsctn.y);
-      }
-    });
-    for (let i = min; i < pointers.length; i++) {
-      if (pointers[i]) {
-        pointers[i].destroy();
-        delete pointers[i]
-      }
 
-    }
+    lineGraphics.clear();
+    objects.forEach((ray) => {
+      lineGraphics.strokeLineShape(new Phaser.Geom.Line(400, 300, ray.x, ray.y,));
+    })
 
     balls.forEach((p) => {
-      if (!logos[p.name]) {
-
-
-        logos[p.name] = game.scene.scenes[0].physics.add.image(400, 100, 'logo');
-        logoGroup.add(logos[p.name]);
-
-        // var particles = game.scene.scenes[0].add.particles('red');
-
-        // var emitter = particles.createEmitter({
-        //   speed: 10,
-        //   scale: { start: 1, end: 0 },
-        //   blendMode: 'ADD'
-        // });
-
-        // emitter.startFollow(logos[p.name]);
-
-
-
+      if (!orbLookup[p.name]) {
+        orbLookup[p.name] = game.scene.scenes[0].physics.add.image(p.position.x, p.position.y, 'logo');
       };
 
+      orbLookup[p.name].setPosition(p.position.x, p.position.y)
+      orbLookup[p.name].body.velocity.x = p.velocity.x;
+      orbLookup[p.name].body.velocity.y = p.velocity.y;
 
-      logos[p.name].body.velocity.x = p.velocity.x + ((logos[p.name].body.position.x - p.position.x) * -1);
-      logos[p.name].body.velocity.y = p.velocity.y + ((logos[p.name].body.position.y - p.position.y) * -1);
-
-      console.log("delta", (logos[p.name].body.position.x - p.position.x) + (logos[p.name].body.position.y - p.position.y));
+      // const td = -1 * ((Date.now() - t) + 1);
+      // if the time-delta is greater than 10 milliseconds OR the position is off by 10 pixels
+      // forcefully override the position and velocty;
+      // if (!(td < -10 || (Math.abs(orbLookup[p.name].body.position.x - p.position.x) + (orbLookup[p.name].body.position.y - p.position.y) > 10))) {
+      //   orbLookup[p.name].setPosition(p.position.x, p.position.y)
+      //   orbLookup[p.name].body.velocity.x = p.velocity.x;
+      //   orbLookup[p.name].body.velocity.y = p.velocity.y;
+      //   // orbLookup[p.name].body.position.x = p.position.x;
+      //   // orbLookup[p.name].body.position.y = p.position.y;
+      //   // otherwise, "fudge" the velocity. This prevents choppy animation.
+      // } else {
+      //   orbLookup[p.name].body.velocity.x = p.velocity.x + ((orbLookup[p.name].body.position.x - p.position.x) / (td));
+      //   orbLookup[p.name].body.velocity.y = p.velocity.y + ((orbLookup[p.name].body.position.y - p.position.y) / (td));
+      // }
+      // t = Date.now();
+      // console.log("delta", td, (orbLookup[p.name].body.position.x - p.position.x) + (orbLookup[p.name].body.position.y - p.position.y));
+      // console.log("delta", td);
 
     })
   });
 
-  // channel.on('removePeer', (uid: string) => {
-  //   logoGroup.remove(logos[uid]);
-  //   logos[uid].destroy();
-  //   delete logos[uid]
-  // });
+  channel.on('goodbyePlayer', (uid: string) => {
+    // logoGroup.remove(logos[uid]);
+    orbLookup[uid].destroy();
+    delete orbLookup[uid];
+  });
 
   channel.emit('helloFromClient', window.udpRoomUid);
 });
+
+
 
 export default (udpRoomUid) => {
   return game;

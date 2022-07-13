@@ -103,6 +103,6 @@
     "dev:back": "webpack --watch -c webpack/server.webpack.js & nodemon ./dist/server.js",
     "build:masterServer": "webpack -c webpack/bumperBalls.server.webpack.js",
     "dev": "webpack --watch -c webpack/client.webpack.js & webpack --watch -c webpack/bumperballs.server.webpack.js & webpack --watch -c webpack/bumperBalls.master.webpack.js & webpack --watch -c webpack/bumperBalls.slave.webpack.js & webpack --watch -c webpack/http.webpack.js & webpack --watch -c webpack/udp.webpack.js & webpack --watch -c webpack/audience.webpack.js",
-    "run:pm2": "nodemon ./src/pm2.js"
+    "run:pm2": "node ./src/pm2.js"
   }
 }

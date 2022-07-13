@@ -21,3 +21,5 @@ pm2.connect(function (err) {
   })
 
 })
+console.log("hello metaphase!")
+// process.exit(0)

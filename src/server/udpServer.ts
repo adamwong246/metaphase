@@ -24,7 +24,32 @@ process.on('message', function (packet) {
   if (packet.data.authoritativeUpdate) {
     udpServer.room(`clients-${packet.data.room}`).emit('updatePeers', packet.data.authoritativeUpdate);
   }
+
+  if (packet.data.goodbyePlayer) {
+    udpServer.room(`clients-${packet.data.room}`).emit('goodbyePlayer', packet.data.goodbyePlayer);
+  }
 });
+
+const pm2send = (pName: string, udpRoomUid: string, message: object) => {
+  return new Promise((res, rej) => {
+    pm2.list((err, list) => {
+      list.forEach((p) => {
+        if (p.name === pName) {
+          pm2.sendDataToProcessId({
+            id: p.pm_id,
+            type: 'process:msg',
+            data: {
+              ...message,
+              udpRoomUid
+            },
+            topic: true
+          }, function (err, res) {
+          });
+        };
+      });
+    });
+  });
+};
 
 udpServer.onConnection(channel => {
   console.log("onConnection", channel.id)
@@ -83,9 +108,8 @@ udpServer.onConnection(channel => {
   });
 
   channel.onDisconnect(() => {
-    // const masterChannel = masterChannels.find((chnl) => {
-    //   chnl.channel === channel
-    // });
+    console.log("channel.onDisconnect", channel.id, `master-${channelIdToRoomUid[channel.id]}`);
+    pm2send(`processServer`, channelIdToRoomUid[channel.id], { disconnect: channel.id })
 
     // const clientChannel = clientChannels.find((chnl) => {
     //   chnl.channel === channel
