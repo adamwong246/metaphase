@@ -2,7 +2,6 @@ import Phaser from "phaser";
 import geckos from '@geckos.io/client'
 
 import gameConfig from "../game/index.ts";
-import game from "../master";
 
 import { udpPort } from "../../../index";
 
@@ -15,60 +14,71 @@ let emitter;
 
 const channel = geckos({ port: udpPort });
 
-const game = new Phaser.Game({
-  ...gameConfig,
-  type: Phaser.WEBGL,
-
-  scene: {
-    create: function () {
-      this.add.image(400, 300, 'sky');
-      keys = game.scene.scenes[0].input.keyboard.addKeys('W,A,S,D');
-      physWorld = new Phaser.Physics.Arcade.World(game.scene.scenes[0], {});
-      game.scene.scenes[0].add.circle(400, 300, 100, 0x0000FF);
-      lineGraphics = game.scene.scenes[0].add.graphics({ lineStyle: { width: 4, color: 0xaa00aa } });
-
-      var particles = game.scene.scenes[0].add.particles('red');
-
-      emitter = particles.createEmitter({
-        speed: 100,
-        scale: { start: 1, end: 0 },
-        blendMode: 'ADD'
-      });
-
-    },
-
-    preload: function () {
-      this.load.setBaseURL('http://labs.phaser.io');
-      this.load.image('sky', 'assets/skies/space3.png');
-      this.load.image('logo', 'assets/sprites/orb-green.png');
-      // this.load.image('logo', 'assets/sprites/phaser3-logo.png');
-      this.load.image('red', 'assets/particles/blue.png');
-      this.load.image('redorb', 'assets/sprites/orb-red.png');
-    },
-
-    update: function () {
-      if (keys.W.isDown) {
-        channel.emit('makeMove', { go: 'up' });
-      }
-      if (keys.S.isDown) {
-        channel.emit('makeMove', { go: 'down' });
-      }
-      if (keys.A.isDown) {
-        channel.emit('makeMove', { go: 'left' });
-      }
-      if (keys.D.isDown) {
-        channel.emit('makeMove', { go: 'right' });
-      }
-    }
-  }
-});
-
 channel.onConnect(error => {
   if (error) {
     console.error(error.message)
     return
   }
   console.log("udp connected")
+
+  const game = new Phaser.Game({
+    ...gameConfig,
+    type: Phaser.CANVAS,
+
+    scene: {
+      create: function () {
+        this.add.image(400, 300, 'sky');
+        keys = game.scene.scenes[0].input.keyboard.addKeys('W,A,S,D');
+        physWorld = new Phaser.Physics.Arcade.World(game.scene.scenes[0], {});
+        game.scene.scenes[0].add.circle(400, 300, 100, 0x0000FF);
+        lineGraphics = game.scene.scenes[0].add.graphics({ lineStyle: { width: 4, color: 0xaa00aa } });
+
+        var particles = game.scene.scenes[0].add.particles('red');
+
+        emitter = particles.createEmitter({
+          speed: 100,
+          scale: { start: 1, end: 0 },
+          blendMode: 'ADD'
+        });
+
+      },
+
+      preload: function () {
+        this.load.setBaseURL('http://labs.phaser.io');
+        this.load.image('sky', 'assets/skies/space3.png');
+        this.load.image('logo', 'assets/sprites/orb-green.png');
+        // this.load.image('logo', 'assets/sprites/phaser3-logo.png');
+        this.load.image('red', 'assets/particles/blue.png');
+        this.load.image('redorb', 'assets/sprites/orb-red.png');
+      },
+
+      update: function () {
+        if (keys.W.isDown) {
+          channel.emit('makeMove', { go: 'up' });
+          emitter.startFollow(orbLookup[channel.id]);
+          emitter.start();
+        }
+        else if (keys.S.isDown) {
+          channel.emit('makeMove', { go: 'down' });
+          emitter.startFollow(orbLookup[channel.id]);
+          emitter.start();
+        }
+        else if (keys.A.isDown) {
+          channel.emit('makeMove', { go: 'left' });
+          emitter.startFollow(orbLookup[channel.id]);
+          emitter.start();
+        }
+        else if (keys.D.isDown) {
+          channel.emit('makeMove', { go: 'right' });
+          emitter.startFollow(orbLookup[channel.id]);
+          emitter.start();
+        } else {
+          emitter.stop();
+
+        }
+      }
+    }
+  });
 
   // channel.on('addPeer', (channelId: string) => {
   //   logos[channelId] = game.scene.scenes[0].add.image(400, 100, 'logo');
@@ -82,9 +92,7 @@ channel.onConnect(error => {
   // });
 
   channel.on('updatePeers', (update: { orbs: [], intersections: [] }) => {
-    // console.log(update)
     const { orbs, intersections } = update;
-
 
     lineGraphics.clear();
     intersections.forEach((ray) => {
@@ -132,7 +140,3 @@ channel.onConnect(error => {
 
   channel.emit('helloFromClient', window.udpRoomUid);
 });
-
-// export default (udpRoomUid) => {
-//   return game;
-// };
