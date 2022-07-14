@@ -11,6 +11,7 @@ let keys;
 let physWorld;
 let t = Date.now();
 let lineGraphics;
+let emitter;
 
 const channel = geckos({ port: udpPort });
 
@@ -25,6 +26,15 @@ const game = new Phaser.Game({
       physWorld = new Phaser.Physics.Arcade.World(game.scene.scenes[0], {});
       game.scene.scenes[0].add.circle(400, 300, 100, 0x0000FF);
       lineGraphics = game.scene.scenes[0].add.graphics({ lineStyle: { width: 4, color: 0xaa00aa } });
+
+      var particles = game.scene.scenes[0].add.particles('red');
+
+      emitter = particles.createEmitter({
+        speed: 100,
+        scale: { start: 1, end: 0 },
+        blendMode: 'ADD'
+      });
+
     },
 
     preload: function () {
@@ -65,13 +75,7 @@ channel.onConnect(error => {
   //   logoGroup.add(logos[channelId]);
 
   //   if (channelId === channel.id) {
-  //     var particles = game.scene.scenes[0].add.particles('red');
 
-  //     var emitter = particles.createEmitter({
-  //       speed: 100,
-  //       scale: { start: 1, end: 0 },
-  //       blendMode: 'ADD'
-  //     });
 
   //     emitter.startFollow(logos[channelId]);
   //   }
@@ -100,24 +104,23 @@ channel.onConnect(error => {
       const diff = Math.abs(orbLookup[p.name].body.position.x - p.position.x) + (orbLookup[p.name].body.position.y - p.position.y);
 
       // if the time-delta is greater than 10 milliseconds OR the position is off by 10 pixels
-      // forcefully override the position and velocty;
-      if ((td < -10 || diff > 20)) {
-
+      if ((td < -50 || diff > 50)) {
+        // forcefully override the position and velocty;
         console.log("force", td, diff);
         orbLookup[p.name].setPosition(p.position.x, p.position.y)
         orbLookup[p.name].body.velocity.x = p.velocity.x;
         orbLookup[p.name].body.velocity.y = p.velocity.y;
         // orbLookup[p.name].body.position.x = p.position.x;
         // orbLookup[p.name].body.position.y = p.position.y;
-        // otherwise, "fudge" the velocity. This prevents choppy animation.
+
       } else {
+        // otherwise, "fudge" the velocity. This prevents choppy animation.
         console.log("fudge", td, diff);
         orbLookup[p.name].body.velocity.x = p.velocity.x + ((orbLookup[p.name].body.position.x - p.position.x) / (td));
         orbLookup[p.name].body.velocity.y = p.velocity.y + ((orbLookup[p.name].body.position.y - p.position.y) / (td));
       }
       t = Date.now();
-      // console.log("delta", td, (orbLookup[p.name].body.position.x - p.position.x) + (orbLookup[p.name].body.position.y - p.position.y));
-      // console.log("delta", td);
+
 
     })
   });
@@ -130,6 +133,6 @@ channel.onConnect(error => {
   channel.emit('helloFromClient', window.udpRoomUid);
 });
 
-export default (udpRoomUid) => {
-  return game;
-};
+// export default (udpRoomUid) => {
+//   return game;
+// };

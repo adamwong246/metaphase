@@ -99,6 +99,11 @@ pm2.list((err, list) => {
 
             process.on('message', function (packet) {
               console.log("phaserServer message!", packet);
+
+              if (packet.data.makeMove) {
+                window.makeMove(packet.data.makeMove, packet.data.move)
+              }
+
               if (packet.data.helloFromClient) {
                 window.addPlayer(packet.data.helloFromClient)
               }

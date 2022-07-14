@@ -90,7 +90,6 @@ const game = new Phaser.Game({
 });
 
 window.addPlayer = function (uid) {
-  console.log("window.addPlayer")
   const orb = game.scene.scenes[0].physics.add.image(400, 100, 'orb').setOrigin(0, 0);
   orbGroup.add(orb);
   orb.setVelocity((Math.random() * 500), (Math.random() * 500));
@@ -107,13 +106,15 @@ window.addPlayer = function (uid) {
 }
 
 window.removePlayer = function (uid) {
-  console.log("window.removePlayer", uid)
   raycaster.removeMappedObjects(orbLookup[uid]);
   orbGroup.remove(orbLookup[uid], true, true);
   window.goodbyePlayer(uid);
 }
 
-window.movePlayer = function ({ uid, direction }) {
+window.makeMove = function (uid, move) {
+  console.log("window.makeMove", uid, move);
+  const direction = move.go;
+
   if (direction === "up") {
     orbLookup[uid].setVelocity(orbLookup[uid].body.velocity.x, orbLookup[uid].body.velocity.y - 10);
   }

@@ -54,6 +54,29 @@ const pm2send = (pName: string, udpRoomUid: string, message: object) => {
 udpServer.onConnection(channel => {
   console.log("onConnection", channel.id)
 
+  channel.on('makeMove', (move: object) => {
+    // console.log("makeMove", channel.id)
+    return new Promise((res, rej) => {
+      pm2.list((err, list) => {
+        list.forEach((p) => {
+          if (p.name === 'processServer') {
+            pm2.sendDataToProcessId({
+              id: p.pm_id,
+              type: 'process:msg',
+              data: {
+                makeMove: channel.id,
+                move,
+                udpRoomUid: channelIdToRoomUid[channel.id]
+              },
+              topic: true
+            }, function (err, res) {
+            });
+          };
+        });
+      });
+    });
+  });
+
   // channel.on('helloFromAudience', (udpRoomUid: string) => {
   //   console.log("helloFromAudience", channel.id)
   //   channel.join(`audience-${udpRoomUid}`);
@@ -88,8 +111,7 @@ udpServer.onConnection(channel => {
         });
       });
     });
-
-  })
+  });
 
   channel.on('authUpdate', logos => {
     udpServer.room(`clients-${channelIdToRoomUid[channel.id]}`).emit('updatePeers', channel.id);
@@ -103,9 +125,9 @@ udpServer.onConnection(channel => {
     udpServer.room(`clients-${channelIdToRoomUid[channel.id]}`).emit('removePeer', channel.id);
   });
 
-  channel.on('makeMove', (move: object) => {
-    udpServer.room(`master-${channelIdToRoomUid[channel.id]}`).emit('movePlayer', { direction: move.go, uid: channel.id });
-  });
+  // channel.on('makeMove', (move: object) => {
+  //   udpServer.room(`master-${channelIdToRoomUid[channel.id]}`).emit('movePlayer', { direction: move.go, uid: channel.id });
+  // });
 
   channel.onDisconnect(() => {
     console.log("channel.onDisconnect", channel.id, `master-${channelIdToRoomUid[channel.id]}`);

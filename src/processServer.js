@@ -78,12 +78,29 @@ process.on('message', function (packet) {
     })
   }
 
-  if (packet.data.helloFromClient) {
 
-    // pm2Send(
-    //   (p) => p.name === `masterServer-${packet.data.udpRoomUid}`,
-    //   packet.data,
-    // );
+  if (packet.data.makeMove) {
+    new Promise((res, rej) => {
+      pm2.list((err, list) => {
+        let sender;
+        list.forEach((p) => {
+          if (p.name === `masterServer-${packet.data.udpRoomUid}`) {
+            const payload = {
+              id: p.pm_id,
+              type: 'process:msg',
+              data: packet.data,
+              topic: true
+            };
+            pm2.sendDataToProcessId(payload, function (err, res) {
+            });
+          }
+        }
+        )
+      })
+    })
+  }
+
+  if (packet.data.helloFromClient) {
     new Promise((res, rej) => {
       pm2.list((err, list) => {
         let sender;
