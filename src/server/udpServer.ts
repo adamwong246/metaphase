@@ -1,10 +1,13 @@
 const pm2 = require('pm2');
 
 import geckos, { ServerChannel } from '@geckos.io/server'
+// import WebRTCConnection from '@geckos.io/server/lib/wrtc/webrtcConnection';
 
 import { udpPort } from "../index";
 
+const peers: Record<string, string[]> = {};
 const channelIdToRoomUid = {};
+const channels: Record<string, any> = {};
 
 const udpServer = geckos();
 udpServer.listen(udpPort);
@@ -17,16 +20,36 @@ process.on('message', function (packet) {
     roomIdtoPm2Id[packet.data.masterReady] = packet.data.pm_id;
   }
 
-  if (packet.data.base64Canvas) {
-    udpServer.room(`audience-${packet.data.room}`).emit('base64Canvas', packet.data.base64Canvas);
+  if (packet.data.authoritativeUpdate) {
+    const channel = channels[packet.data.toChannelId];
+
+    if (channel) {
+      channel.emit('authoritativeUpdate', packet.data);
+    } else {
+      // console.log('no such channel exists?!', packet.data.toChannelId)
+    }
+
   }
 
-  if (packet.data.authoritativeUpdate) {
-    udpServer.room(`clients-${packet.data.room}`).emit('updatePeers', packet.data.authoritativeUpdate);
+  if (packet.data.helloPlayer) {
+    // udpServer.room(`clients-${packet.data.udpRoomUid}`).emit('addPeer', packet.data.helloPlayer);
+    (peers[packet.data.udpRoomUid] || []).forEach((peerId) => {
+      channels[peerId].emit('addPeer', packet.data.helloPlayer);
+    })
+
+    channels[packet.data.helloPlayer].emit('existingPlayers', peers[packet.data.udpRoomUid]);
+
+    peers[packet.data.udpRoomUid] = [
+      ...(peers[packet.data.udpRoomUid] || []),
+      packet.data.helloPlayer
+    ]
+
+
+
   }
 
   if (packet.data.goodbyePlayer) {
-    udpServer.room(`clients-${packet.data.room}`).emit('goodbyePlayer', packet.data.goodbyePlayer);
+    udpServer.room(`clients-${packet.data.udpRoomUid}`).emit('removePeer', packet.data.goodbyePlayer);
   }
 });
 
@@ -55,7 +78,6 @@ udpServer.onConnection(channel => {
   console.log("onConnection", channel.id)
 
   channel.on('makeMove', (move: object) => {
-    // console.log("makeMove", channel.id)
     return new Promise((res, rej) => {
       pm2.list((err, list) => {
         list.forEach((p) => {
@@ -77,21 +99,16 @@ udpServer.onConnection(channel => {
     });
   });
 
-  // channel.on('helloFromAudience', (udpRoomUid: string) => {
-  //   console.log("helloFromAudience", channel.id)
-  //   channel.join(`audience-${udpRoomUid}`);
-  //   // channelIdToRoomUid[channel.id] = udpRoomUid;
-  // })
-
   channel.on('helloFromServer', (udpRoomUid: string) => {
-    console.log("helloFromServer", channel.id)
     channel.join(`master-${udpRoomUid}`);
     channelIdToRoomUid[channel.id] = udpRoomUid;
   })
 
   channel.on('helloFromClient', (udpRoomUid: string) => {
-    console.log("helloFromClient", channel.id)
+    console.log('hello', udpRoomUid, channel.id)
     channel.join(`clients-${udpRoomUid}`);
+    channels[channel.id] = channel;
+
     channelIdToRoomUid[channel.id] = udpRoomUid;
     return new Promise((res, rej) => {
       pm2.list((err, list) => {
@@ -113,21 +130,22 @@ udpServer.onConnection(channel => {
     });
   });
 
-  channel.on('authUpdate', logos => {
-    udpServer.room(`clients-${channelIdToRoomUid[channel.id]}`).emit('updatePeers', channel.id);
-  })
+  // channel.on('helloPlayer', (name: string) => {
+  //   console.log("helloPlayer", channel.id)
+  //   udpServer.room(`clients-${channelIdToRoomUid[channel.id]}`).emit('addPeer', channel.id);
+  // });
 
-  channel.on('welcomePlayer', (name: string) => {
-    udpServer.room(`clients-${channelIdToRoomUid[channel.id]}`).emit('addPeer', channel.id);
-  });
-
-  channel.on('goodbyePlayer', (name: string) => {
-    udpServer.room(`clients-${channelIdToRoomUid[channel.id]}`).emit('removePeer', channel.id);
-  });
+  // channel.on('goodbyePlayer', (name: string) => {
+  //   console.log("goodbyePlayer", channel.id)
+  //   udpServer.room(`clients-${channelIdToRoomUid[channel.id]}`).emit('removePeer', channel.id);
+  // });
 
   // channel.on('makeMove', (move: object) => {
   //   udpServer.room(`master-${channelIdToRoomUid[channel.id]}`).emit('movePlayer', { direction: move.go, uid: channel.id });
   // });
+  // channel.on('authUpdate', logos => {
+  //   udpServer.room(`clients-${channelIdToRoomUid[channel.id]}`).emit('updatePeers', channel.id);
+  // })
 
   channel.onDisconnect(() => {
     console.log("channel.onDisconnect", channel.id, `master-${channelIdToRoomUid[channel.id]}`);

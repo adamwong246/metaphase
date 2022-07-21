@@ -8,6 +8,7 @@ import { JSDOM } from "jsdom";
 const masterBundle = fs.readFileSync("./webpack/dist/master.bundle.js").toString();
 
 const newuid = process.argv[2];
+let LAST_FRAME_TIME = performance.now();
 
 class FakeXMLHttpRequest {
   url;
@@ -46,10 +47,6 @@ class FakeXMLHttpRequest {
   onprogress() { }
 };
 
-
-// <script type="text/javascript" src = "https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js" > </script>
-// < script type = "text/javascript" src = "https://cdn.jsdelivr.net/npm/phaser-raycaster@0.10.4/dist/phaser-raycaster.min.js" > </script>
-
 pm2.list((err, list) => {
   list.forEach((p) => {
     if (p.name === 'udp') {
@@ -76,20 +73,26 @@ pm2.list((err, list) => {
             };
 
             window.URL.revokeObjectURL = () => { };
+
             const animationFrame = (cb: any) => {
+              // console.log(1 / ((performance.now() - LAST_FRAME_TIME) / 1000));
+              LAST_FRAME_TIME = performance.now();
+
               if (typeof cb !== 'function') return 0 // this line saves a lot of cpu
               window.setTimeout(() => cb(0), 1)
               return 0
             }
             window.requestAnimationFrame = cb => animationFrame(cb)
 
-            window.authoritativeUpdate = (authUpdate) => {
+            window.authoritativeUpdate = (toChannelId, authUpdate) => {
+              // console.log(toChannelId, authUpdate)
               pm2.sendDataToProcessId({
                 id: p.pm_id,
                 type: 'process:msg',
                 data: {
                   room: newuid,
-                  authoritativeUpdate: authUpdate
+                  authoritativeUpdate: authUpdate,
+                  toChannelId
                 },
                 topic: true
               }, function (err, res) {
@@ -98,8 +101,6 @@ pm2.list((err, list) => {
             }
 
             process.on('message', function (packet) {
-              console.log("phaserServer message!", packet);
-
               if (packet.data.makeMove) {
                 window.makeMove(packet.data.makeMove, packet.data.move)
               }
@@ -113,7 +114,6 @@ pm2.list((err, list) => {
             });
 
             window.masterReady = () => {
-              console.log("window.masterReady")
               return new Promise((res, rej) => {
                 pm2.list((err, list) => {
                   list.forEach((p) => {
@@ -123,6 +123,28 @@ pm2.list((err, list) => {
                         type: 'process:msg',
                         data: {
                           masterReady: newuid
+                        },
+                        topic: true
+                      }, function (err, res) {
+                      });
+                    };
+                  });
+                });
+              });
+            }
+
+            window.helloPlayer = (uid) => {
+              console.log("window.helloPlayer", uid)
+              return new Promise((res, rej) => {
+                pm2.list((err, list) => {
+                  list.forEach((p) => {
+                    if (p.name === 'processServer') {
+                      pm2.sendDataToProcessId({
+                        id: p.pm_id,
+                        type: 'process:msg',
+                        data: {
+                          helloPlayer: uid,
+                          udpRoomUid: newuid
                         },
                         topic: true
                       }, function (err, res) {
@@ -143,7 +165,8 @@ pm2.list((err, list) => {
                         id: p.pm_id,
                         type: 'process:msg',
                         data: {
-                          goodbyePlayer: goodbyeUid
+                          goodbyePlayer: goodbyeUid,
+                          udpRoomUid: newuid
                         },
                         topic: true
                       }, function (err, res) {
@@ -157,9 +180,6 @@ pm2.list((err, list) => {
           },
         }
       );
-
-      // vdom.virtualConsole.sendTo(console);
-
     };
   });
 });
